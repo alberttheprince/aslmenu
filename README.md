@@ -8,6 +8,7 @@ FiveM's first open-source American Sign Language (ASL) menu for using ASL in Fiv
 - Accurate ASL Letters (A-Z)
 - Accurate ASL numbers (0-9)
 - Collection of signs/premade sentences
+- Ability to pre-structure sentences to display coherent messages
 - Ability to view other users from an accurate, first-person perspective while signing
 
 
