@@ -1,5 +1,12 @@
 Config = {}
 
+-- Commands
+-- /asl - Opens text prompt for signing in ASL (or /asl [text] to sign directly)
+-- /aslhelp - Shows all available commands and how the system works
+-- /asldebug - Toggles debug mode to show animation details in console (useful for troubleshooting)
+-- /asltest - Toggles test mode to allow signing without nearby players (useful for testing alone)
+-- Press X - Stops signing at any time
+
 -- Animation definitions with both dictionary and animation name
 -- Each animation requires: dict (animation dictionary) and name (animation clip name)
 
@@ -65,7 +72,7 @@ Config.PhraseAnimations = {
     ["what"] = { dict = "ebrwny_sign", name = "ebrwny_what", duration = 1480 },
     
     -- Sentences folder
-    ["again"] = { dict = "again@francis", name = "again_clip" }, -- PLACEHOLDER - use /testasl to find correct name
+    ["again"] = { dict = "again@francis", name = "again_clip" },
     ["i love you"] = { dict = "i_love_you@francis", name = "i_love_you_clip" },
     ["i love you too"] = { dict = "i_love_you_2@francis", name = "i_love_you_2_clip" },
     ["my name is"] = { dict = "my_name_is@francis", name = "my_name_is_clip" },
@@ -73,21 +80,6 @@ Config.PhraseAnimations = {
     ["no way"] = { dict = "no_way@francis", name = "no_way_clip" },
     ["what's up"] = { dict = "whats_up@francis", name = "whats_up_clip" },
     ["whats up"] = { dict = "whats_up@francis", name = "whats_up_clip" }, 
-}
-
--- Common clip name patterns to try for discovering names
-Config.ClipNamePatterns = {
-    -- For sentences folder animations, try these patterns:
-    "idle",
-    "clip",
-    "sign",
-    "%DICT%_clip",        -- e.g., again_clip
-    "%DICT%",             -- e.g., again
-    "%DICT%@francis",     -- e.g., again@francis
-    "asl_%DICT%",         -- e.g., asl_again
-    "asl_%DICT%_clip",    -- e.g., asl_again_clip
-    "%DICT%_sign",        -- e.g., again_sign
-    "%DICT%_asl"          -- e.g., again_asl
 }
 
 -- Special character animations (punctuation, etc.)
