@@ -3,7 +3,7 @@ Config = {}
 -- Animation definitions with both dictionary and animation name
 -- Each animation requires: dict (animation dictionary) and name (animation clip name)
 
--- Letter animations (based on naming convention from GitHub)
+-- Letter animations
 Config.LetterAnimations = {
     ["a"] = { dict = "asl_a@francis", name = "asl_a_clip" },
     ["b"] = { dict = "asl_b@francis", name = "asl_b_clip" },
@@ -54,7 +54,7 @@ Config.NumberAnimations = {
 
 -- Full word/phrase animations
 Config.PhraseAnimations = {
-    -- Signs folder (confirmed working animations)
+    -- Signs folder
     ["yes"] = { dict = "ebrwny_sign", name = "ebrwny_yes", duration = 1030 },
     ["no"] = { dict = "ebrwny_sign", name = "ebrwny_no", duration = 2080 },
     ["i'm good"] = { dict = "ebrwny_sign", name = "ebrwny_imgood", duration = 3940 },
@@ -62,22 +62,17 @@ Config.PhraseAnimations = {
     ["i am good"] = { dict = "ebrwny_sign", name = "ebrwny_imgood", duration = 3940 },
     ["see ya"] = { dict = "ebrwny_sign", name = "ebrwny_seeya", duration = 1200 },
     ["see you"] = { dict = "ebrwny_sign", name = "ebrwny_seeya", duration = 1200 },
-    ["cya"] = { dict = "ebrwny_sign", name = "ebrwny_seeya", duration = 1200 },
     ["what"] = { dict = "ebrwny_sign", name = "ebrwny_what", duration = 1480 },
     
-    -- Sentences folder (need to discover clip names - using placeholders)
+    -- Sentences folder
     ["again"] = { dict = "again@francis", name = "again_clip" }, -- PLACEHOLDER - use /testasl to find correct name
-    ["i love you"] = { dict = "i_love_you@francis", name = "i_love_you_clip" }, -- PLACEHOLDER
-    ["ily"] = { dict = "i_love_you@francis", name = "i_love_you_clip" }, -- PLACEHOLDER
-    ["i love you too"] = { dict = "i_love_you_2@francis", name = "i_love_you_2_clip" }, -- PLACEHOLDER
-    ["ily2"] = { dict = "i_love_you_2@francis", name = "i_love_you_2_clip" }, -- PLACEHOLDER
-    ["my name is"] = { dict = "my_name_is@francis", name = "my_name_is_clip" }, -- PLACEHOLDER
-    ["my name is prince"] = { dict = "my_name_is_prince@francis", name = "my_name_is_prince_clip" }, -- PLACEHOLDER
-    ["no way"] = { dict = "no_way@francis", name = "no_way_clip" }, -- PLACEHOLDER
-    ["what's up"] = { dict = "whats_up@francis", name = "whats_up_clip" }, -- PLACEHOLDER
-    ["whats up"] = { dict = "whats_up@francis", name = "whats_up_clip" }, -- PLACEHOLDER
-    ["sup"] = { dict = "whats_up@francis", name = "whats_up_clip" }, -- PLACEHOLDER
-    ["wassup"] = { dict = "whats_up@francis", name = "whats_up_clip" } -- PLACEHOLDER
+    ["i love you"] = { dict = "i_love_you@francis", name = "i_love_you_clip" },
+    ["i love you too"] = { dict = "i_love_you_2@francis", name = "i_love_you_2_clip" },
+    ["my name is"] = { dict = "my_name_is@francis", name = "my_name_is_clip" },
+    ["my name is prince"] = { dict = "my_name_is_prince@francis", name = "my_name_is_prince_clip" },
+    ["no way"] = { dict = "no_way@francis", name = "no_way_clip" },
+    ["what's up"] = { dict = "whats_up@francis", name = "whats_up_clip" },
+    ["whats up"] = { dict = "whats_up@francis", name = "whats_up_clip" }, 
 }
 
 -- Common clip name patterns to try for discovering names
