@@ -6,9 +6,9 @@ local targetPlayer = nil
 -- Utility Functions
 local function LoadAnimDict(dict)
     if not HasAnimDictLoaded(dict) then
-        RequestAnimDict(dict) 
+        RequestAnimDict(dict)
         while not HasAnimDictLoaded(dict) do
-            Citizen.Wait(1)
+            Wait(1)
         end
     end
 end
@@ -16,7 +16,7 @@ end
 local function GetNearestPlayer()
     local players = GetActivePlayers()
     local playerPed = PlayerPedId()
-    local playerCoords = GetEntityCoords(playerPed) 
+    local playerCoords = GetEntityCoords(playerPed)
     local nearestPlayer = nil
     local nearestDistance = math.huge
     
@@ -51,49 +51,49 @@ local function CreateASLCamera()
         0.0, 0.0, 0.0,
         Config.Settings.cameraFOV,
         true, 2
-    ) 
+    )
     
-    -- Focus on target player if found
+    -- Focus on the target player if found
     if targetPlayer then
-        PointCamAtEntity(aslCamera, targetPlayer, 0.0, 0.0, 0.5, true) 
+        PointCamAtEntity(aslCamera, targetPlayer, 0.0, 0.0, 0.5, true)
     end
     
-    -- Enable first person view
-    SetFollowPedCamViewMode(4) 
+    -- Enable first-person view
+    SetFollowPedCamViewMode(4)
     
     -- Smooth transition to camera
-    RenderScriptCams(true, true, Config.Settings.cameraTransitionTime, true, true) 
+    RenderScriptCams(true, true, Config.Settings.cameraTransitionTime, true, true)
     
     return aslCamera
 end
 
 local function RestoreCamera()
     if aslCamera then
-        RenderScriptCams(false, true, Config.Settings.cameraTransitionTime, true, true) 
-        DestroyCam(aslCamera, false) 
+        RenderScriptCams(false, true, Config.Settings.cameraTransitionTime, true, true)
+        DestroyCam(aslCamera, false)
         aslCamera = nil
     end
     
     -- Restore third person view
-    SetFollowPedCamViewMode(0) 
+    SetFollowPedCamViewMode(0)
 end
 
 local function GetTextInput(title, maxLength)
-    AddTextEntry('ASL_INPUT', title) 
-    DisplayOnscreenKeyboard(1, "ASL_INPUT", "", "", "", "", "", maxLength or 100) 
+    AddTextEntry('ASL_INPUT', title)
+    DisplayOnscreenKeyboard(1, "ASL_INPUT", "", "", "", "", "", maxLength or 100)
     
-    while UpdateOnscreenKeyboard() == 0  do
+    while UpdateOnscreenKeyboard() == 0 do
         DisableAllControlActions(0)
-        Citizen.Wait(0)
-    end 
+        Wait(0)
+    end
     
-    if UpdateOnscreenKeyboard() == 1  then
-        local result = GetOnscreenKeyboardResult() 
-        Citizen.Wait(100)
+    if UpdateOnscreenKeyboard() == 1 then
+        local result = GetOnscreenKeyboardResult()
+        Wait(100)
         return result
     else
         return nil
-    end 
+    end
 end
 
 local function NormalizeText(text)
@@ -113,24 +113,25 @@ local function ParseTextForAnimations(text)
     
     -- First, check if the entire text matches a phrase animation
     if Config.PhraseAnimations[normalizedText] then
+        local animData = Config.PhraseAnimations[normalizedText]
         table.insert(animations, {
             type = "phrase",
-            animation = Config.PhraseAnimations[normalizedText],
+            animation = animData,
             text = normalizedText,
-            duration = Config.Settings.wordDuration
+            duration = animData.duration or Config.Settings.wordDuration
         })
         return animations
     end
     
     -- Check for partial phrase matches
-    for phrase, animName in pairs(Config.PhraseAnimations) do
+    for phrase, animData in pairs(Config.PhraseAnimations) do
         if string.find(normalizedText, phrase, 1, true) then
             -- Add the phrase animation
             table.insert(animations, {
                 type = "phrase",
-                animation = animName,
+                animation = animData,
                 text = phrase,
-                duration = Config.Settings.wordDuration
+                duration = animData.duration or Config.Settings.wordDuration
             })
             -- Remove the phrase from the text
             normalizedText = string.gsub(normalizedText, phrase, "")
@@ -147,11 +148,12 @@ local function ParseTextForAnimations(text)
     for _, word in ipairs(words) do
         -- Check if word has a phrase animation
         if Config.PhraseAnimations[word] then
+            local animData = Config.PhraseAnimations[word]
             table.insert(animations, {
                 type = "word",
-                animation = Config.PhraseAnimations[word],
+                animation = animData,
                 text = word,
-                duration = Config.Settings.wordDuration
+                duration = animData.duration or Config.Settings.wordDuration
             })
         else
             -- Spell out the word letter by letter
@@ -172,6 +174,15 @@ local function ParseTextForAnimations(text)
                         text = char,
                         duration = Config.Settings.letterDuration
                     })
+                elseif Config.SpecialAnimations[char] then
+                    if Config.SpecialAnimations[char] then
+                        table.insert(animations, {
+                            type = "special",
+                            animation = Config.SpecialAnimations[char],
+                            text = char,
+                            duration = Config.Settings.letterDuration
+                        })
+                    end
                 end
             end
             
@@ -191,44 +202,84 @@ local function PlayASLAnimation(animData)
     
     if animData.type == "pause" then
         -- Just wait during pause
-        Citizen.Wait(animData.duration)
+        Wait(animData.duration)
         return
     end
     
+    -- Check if animation data exists
+    if not animData.animation or not animData.animation.dict or not animData.animation.name then
+        if Config.Settings.debugMode then
+            print(string.format("^3[ASL Debug] Missing animation data for: %s^0", animData.text or "unknown"))
+        end
+        return
+    end
+    
+    -- Extract dictionary and animation name
+    local animDict = animData.animation.dict
+    local animName = animData.animation.name
+    
+    -- Debug output
+    if Config.Settings.debugMode then
+        print(string.format("^2[ASL Debug] Playing: Dict=%s, Name=%s, Text=%s^0", animDict, animName, animData.text))
+    end
+    
     -- Load animation dictionary
-    LoadAnimDict(Config.AnimationDict)
+    LoadAnimDict(animDict)
+    
+    -- Verify animation loaded
+    if not HasAnimDictLoaded(animDict) then
+        if Config.Settings.debugMode then
+            print(string.format("^1[ASL Debug] Failed to load animation dictionary: %s^0", animDict))
+        end
+        TriggerEvent('chat:addMessage', {
+            color = {255, 100, 100},
+            args = {"ASL", "Animation not found: " .. animDict}
+        })
+        return
+    end
     
     -- Play animation
     TaskPlayAnim(
         playerPed,
-        Config.AnimationDict,
-        animData.animation,
+        animDict,
+        animName,
         Config.Settings.blendInSpeed,
         Config.Settings.blendOutSpeed,
         animData.duration,
         Config.Settings.animFlag,
         0.0,
         false, false, false
-    ) 
+    )
+    
+    -- Check if animation started
+    if not IsEntityPlayingAnim(playerPed, animDict, animName, 3) then
+        Wait(50) -- Small delay to let animation start
+        if not IsEntityPlayingAnim(playerPed, animDict, animName, 3) and Config.Settings.debugMode then
+            print(string.format("^3[ASL Debug] Animation may not have started: %s/%s^0", animDict, animName))
+        end
+    end
     
     -- Show subtitle if enabled
     if Config.Settings.showSubtitles then
         local endTime = GetGameTimer() + animData.duration
-        Citizen.CreateThread(function()
+        CreateThread(function()
             while GetGameTimer() < endTime and isASLActive do
-                Citizen.Wait(0)
+                Wait(0)
                 DrawSubtitle("Signing: " .. string.upper(animData.text))
             end
         end)
     end
     
     -- Wait for animation to complete
-    Citizen.Wait(animData.duration)
+    Wait(animData.duration)
     
     -- Add pause between letters
     if animData.type == "letter" then
-        Citizen.Wait(Config.Settings.pauseBetweenLetters)
+        Wait(Config.Settings.pauseBetweenLetters)
     end
+    
+    -- Clean up dictionary if not needed
+    RemoveAnimDict(animDict)
 end
 
 function DrawSubtitle(text)
@@ -260,17 +311,25 @@ end
 local function StartASLMode()
     if isASLActive then return end
     
-    -- Find nearest player
-    local nearest, distance = GetNearestPlayer()
-    if not nearest then
-        TriggerEvent('chat:addMessage', {
-            color = {255, 100, 100},
-            args = {"ASL", "No players nearby to sign to!"}
-        }) 
-        return
+    -- Find nearest player (unless in test mode)
+    if not Config.Settings.testMode then
+        local nearest, distance = GetNearestPlayer()
+        if not nearest then
+            TriggerEvent('chat:addMessage', {
+                color = {255, 100, 100},
+                args = {"ASL", "No players nearby to sign to!"}
+            })
+            return
+        end
+        targetPlayer = nearest
+    else
+        -- Test mode - no target required
+        targetPlayer = nil
+        if Config.Settings.debugMode then
+            print("^3[ASL Debug] Test mode enabled - no target player required^0")
+        end
     end
     
-    targetPlayer = nearest
     isASLActive = true
     
     -- Get text input
@@ -291,13 +350,13 @@ local function StartASLMode()
         TriggerEvent('chat:addMessage', {
             color = {255, 100, 100},
             args = {"ASL", "No valid animations found for: " .. inputText}
-        }) 
+        })
         StopASLMode()
         return
     end
     
     -- Start playing animations
-    Citizen.CreateThread(function()
+    CreateThread(function()
         for _, animData in ipairs(currentAnimations) do
             if not isASLActive then break end
             PlayASLAnimation(animData)
@@ -305,15 +364,15 @@ local function StartASLMode()
         
         -- Finished all animations
         if isASLActive then
-            Citizen.Wait(1000) -- Brief pause at end
+            Wait(1000) -- Brief pause at end
             StopASLMode()
         end
     end)
     
     -- Handle controls while signing
-    Citizen.CreateThread(function()
+    CreateThread(function()
         while isASLActive do
-            Citizen.Wait(0)
+            Wait(0)
             
             -- Show instructions
             if Config.Settings.showInstructions then
@@ -350,7 +409,7 @@ function StopASLMode()
     
     -- Clear animations
     local playerPed = PlayerPedId()
-    ClearPedTasks(playerPed) 
+    ClearPedTasks(playerPed)
     
     -- Restore camera
     RestoreCamera()
@@ -359,26 +418,30 @@ function StopASLMode()
     TriggerEvent('chat:addMessage', {
         color = {100, 200, 100},
         args = {"ASL", "Stopped signing"}
-    }) 
+    })
 end
 
 -- Register main command
 RegisterCommand('asl', function(source, args, rawCommand)
     if #args > 0 then
         -- Direct text input via command
-        local inputText = table.concat(args, " ") 
+        local inputText = table.concat(args, " ")
         
-        -- Find nearest player
-        local nearest, distance = GetNearestPlayer()
-        if not nearest then
-            TriggerEvent('chat:addMessage', {
-                color = {255, 100, 100},
-                args = {"ASL", "No players nearby to sign to!"}
-            }) 
-            return
+        -- Find nearest player (unless in test mode)
+        if not Config.Settings.testMode then
+            local nearest, distance = GetNearestPlayer()
+            if not nearest then
+                TriggerEvent('chat:addMessage', {
+                    color = {255, 100, 100},
+                    args = {"ASL", "No players nearby to sign to!"}
+                })
+                return
+            end
+            targetPlayer = nearest
+        else
+            targetPlayer = nil
         end
         
-        targetPlayer = nearest
         isASLActive = true
         
         -- Create camera and start signing
@@ -386,22 +449,22 @@ RegisterCommand('asl', function(source, args, rawCommand)
         currentAnimations = ParseTextForAnimations(inputText)
         
         -- Start animation playback
-        Citizen.CreateThread(function()
+        CreateThread(function()
             for _, animData in ipairs(currentAnimations) do
                 if not isASLActive then break end
                 PlayASLAnimation(animData)
             end
             
             if isASLActive then
-                Citizen.Wait(1000)
+                Wait(1000)
                 StopASLMode()
             end
         end)
         
         -- Handle controls
-        Citizen.CreateThread(function()
+        CreateThread(function()
             while isASLActive do
-                Citizen.Wait(0)
+                Wait(0)
                 if Config.Settings.showInstructions then
                     DrawInstructions()
                 end
@@ -435,7 +498,7 @@ AddEventHandler('onResourceStop', function(resourceName)
 end)
 
 -- Help command
-RegisterCommand('aslhelp', function() 
+RegisterCommand('aslhelp', function()
     TriggerEvent('chat:addMessage', {
         color = {100, 200, 255},
         multiline = true,
@@ -443,6 +506,9 @@ RegisterCommand('aslhelp', function()
 Commands:
 - /asl - Opens text prompt for signing
 - /asl [text] - Sign text directly
+- /asldebug - Toggle debug mode
+- /asltest - Toggle test mode (no nearby player required)
+- /testasl [dict] [clip] - Test specific animation
 - Press X while signing to stop
 
 The system will:
@@ -451,5 +517,95 @@ The system will:
 - Otherwise spell words letter by letter
 - Show subtitles of what you're signing]]
         }
-    }) 
+    })
+end, false)
+
+-- Debug mode toggle
+RegisterCommand('asldebug', function()
+    Config.Settings.debugMode = not Config.Settings.debugMode
+    TriggerEvent('chat:addMessage', {
+        color = {200, 200, 100},
+        args = {"ASL", "Debug mode " .. (Config.Settings.debugMode and "enabled" or "disabled")}
+    })
+end, false)
+
+-- Test mode toggle
+RegisterCommand('asltest', function()
+    Config.Settings.testMode = not Config.Settings.testMode
+    TriggerEvent('chat:addMessage', {
+        color = {200, 200, 100},
+        args = {"ASL", "Test mode " .. (Config.Settings.testMode and "enabled (no target required)" or "disabled")}
+    })
+end, false)
+
+-- Test specific animation
+RegisterCommand('testasl', function(source, args)
+    local dict = args[1]
+    local clip = args[2]
+    
+    if dict and clip then
+        local playerPed = PlayerPedId()
+        
+        -- Load and test animation
+        RequestAnimDict(dict)
+        local attempts = 0
+        while not HasAnimDictLoaded(dict) and attempts < 100 do
+            Wait(10)
+            attempts = attempts + 1
+        end
+        
+        if HasAnimDictLoaded(dict) then
+            TaskPlayAnim(playerPed, dict, clip, 8.0, -8.0, 3000, 49, 0, false, false, false)
+            
+            TriggerEvent('chat:addMessage', {
+                color = {100, 255, 100},
+                args = {"ASL Test", string.format("Playing: Dict=%s, Clip=%s", dict, clip)}
+            })
+            
+            -- Check if animation is actually playing
+            Wait(100)
+            if IsEntityPlayingAnim(playerPed, dict, clip, 3) then
+                print(string.format("^2[ASL Test] SUCCESS: Animation is playing^0"))
+            else
+                print(string.format("^1[ASL Test] FAILED: Animation did not start (clip name may be wrong)^0"))
+            end
+        else
+            TriggerEvent('chat:addMessage', {
+                color = {255, 100, 100},
+                args = {"ASL Test", "Failed to load dictionary: " .. dict}
+            })
+        end
+    else
+        TriggerEvent('chat:addMessage', {
+            color = {255, 255, 100},
+            args = {"ASL Test", "Usage: /testasl [dictionary] [clipname]"}
+        })
+        TriggerEvent('chat:addMessage', {
+            color = {255, 255, 100},
+            args = {"Example", "/testasl asl_1b@francis asl_1b_clip"}
+        })
+    end
+end, false)
+
+-- List available animations command
+RegisterCommand('asllist', function()
+    print("^2=== ASL Animation List ===^0")
+    print("^3Letters:^0")
+    for letter, anim in pairs(Config.LetterAnimations) do
+        print(string.format("  %s: %s / %s", letter, anim.dict, anim.name))
+    end
+    print("^3Numbers:^0")
+    for num, anim in pairs(Config.NumberAnimations) do
+        print(string.format("  %s: %s / %s", num, anim.dict, anim.name))
+    end
+    print("^3Phrases (first 10):^0")
+    local count = 0
+    for phrase, anim in pairs(Config.PhraseAnimations) do
+        print(string.format("  '%s': %s / %s", phrase, anim.dict, anim.name))
+        count = count + 1
+        if count >= 10 then
+            print("  ... and more. Check config.lua for full list")
+            break
+        end
+    end
 end, false)
