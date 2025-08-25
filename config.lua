@@ -8,7 +8,13 @@ Config = {}
 -- - /asl2 - Third-person signing (move while signing!)
 -- - /asl2 [text] - Sign text in third-person mode
 -- - /asldebug - Toggle debug mode
--- - Press ESC or type 'exit' to close ASL mode
+-- - Press ESC to close ASL mode
+
+-- Third-Person Mode Controls (/asl2):
+-- - Press ENTER to activate text input
+-- - Press ENTER again to sign the text
+-- - Press ESC to exit text input or close ASL
+-- - You can move freely with WASD when not typing
 
 -- Modes:
 -- - Camera modes (/asl, /aslself): Focuses camera, no movement
@@ -17,7 +23,7 @@ Config = {}
 -- The system will:
 -- - Play full phrase animations when available
 -- - Otherwise spell words letter by letter
--- - In third-person mode, you can walk/run while signing!
+-- - In third-person mode, you can walk/run while signing
 
 -- Letter animations
 Config.LetterAnimations = {
