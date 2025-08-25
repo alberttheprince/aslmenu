@@ -8,9 +8,6 @@ This menu is focused on ASL, while we'd like to provide support for all sign lan
 
 If you'd like to contribute, please use a popular, available ASL reference such as [https://www.lifeprint.com/](https://www.lifeprint.com/) when creating a new animation. Include your reference so that we can validate contributions.
 
-
-# This is a work in progress; it is not ready for use
-
 # **Features:**
 - Accurate ASL Letters (A-Z)
 - Accurate ASL numbers (0-9)
@@ -29,4 +26,4 @@ If you'd like to contribute, please use a popular, available ASL reference such 
 
 The code in this project is licensed under GPL 3.0. Please note that the animations are provided to this project under the express agreement that they may not be resold, escrowed, or included in any asset packs, software, or similar products intended for sale or resale. 
 
-You may use these animations in a project (for example, a for-profit FiveM server) but you may not sell, resell, or restrict them through financial mechanisms, for example but not limited to, paywalls or subscriptions.
+You may use these animations in a project (for example, a for-profit FiveM server) but may not sell, resell, or restrict them through financial mechanisms, such as paywalls or subscriptions.
