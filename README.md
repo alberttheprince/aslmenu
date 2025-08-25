@@ -11,19 +11,20 @@ If you'd like to contribute, please use a popular, available ASL reference such 
 
 # This is a work in progress; it is not ready for use
 
-**Features:**
+# **Features:**
 - Accurate ASL Letters (A-Z)
 - Accurate ASL numbers (0-9)
 - Collection of signs/premade sentences
 - Ability to pre-structure sentences to display coherent messages like real sign language
 - Ability to view other users from an accurate, first-person perspective while signing
 
-
-**Requirements:**
-- TBD
-
-
-**Credit:**
+# **Credit:**
 - The [Popcorn Roleplay Community](https://discord.com/invite/popcornroleplay) for sponsoring the creation of this menu, managing the project, and testing the emotes
 - Francis from [NoVa Mods](https://discord.gg/nova-mods) for creation of the alphabet, numbers, and signs
 - [EnchantedBrownie](https://www.gta5-mods.com/misc/asl-animations) for their signs and initial inspiration to make more ASL signs
+
+# **License:**
+
+The code in this project is licensed under GPL 3.0. Please note that the animations are provided to this project under the express agreement that they may not be resold, escrowed, or included in any asset packs, software, or similar products intended for sale or resale. 
+
+You may use these animations in a project (for example, a for-profit FiveM server) but you may not sell, resell, or restrict them through financial mechanisms, for example but not limited to, paywalls or subscriptions.
