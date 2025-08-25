@@ -39,6 +39,23 @@ If you'd like to contribute, please use a popular, available ASL reference such 
 - Camera modes (/asl, /aslself): Focuses camera, no movement
 - Third-person mode (/asl2): Keep normal view, move freely
 
+# Exports for Developers:
+
+```
+exports['aslmenu']:openASL()
+exports['aslmenu']:openASL("hello") -- With direct text
+
+-- Open self practice mode (camera to self)
+exports['aslmenu']:openASLSelf()
+exports['aslmenu']:openASLSelf("i love you") -- With direct text
+
+-- Open third-person mode (free movement)
+exports['aslmenu']:openASL2()
+exports['aslmenu']:openASL2("whats up") -- With direct text
+
+-- Close any active ASL mode
+exports['aslmenu']:closeASL()
+```
 
 # **Credit:**
 - The [Popcorn Roleplay Community](https://discord.com/invite/popcornroleplay) for sponsoring the creation of this menu, managing the project, and testing the emotes
