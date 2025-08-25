@@ -119,7 +119,7 @@ Config.Settings = {
     
     -- Debug settings
     debugMode = false,             -- Show debug information
-    testMode = false               -- Don't require nearby players for testing
+
 }
 
 -- Text normalization rules

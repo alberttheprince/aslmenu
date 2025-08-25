@@ -1,0 +1,72 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: transparent;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+#asl-container {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+}
+
+#status-display {
+    text-align: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 8px;
+    min-height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#status-display:empty {
+    display: none;
+}
+
+.input-wrapper {
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 8px;
+    padding: 15px;
+    border: 2px solid rgba(100, 200, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+#asl-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 4px;
+    outline: none;
+    transition: all 0.3s;
+}
+
+#asl-input:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(100, 200, 255, 0.8);
+    box-shadow: 0 0 10px rgba(100, 200, 255, 0.3);
+}
+
+.hint {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    text-align: center;
+}

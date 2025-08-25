@@ -2,6 +2,7 @@ local isASLActive = false
 local aslCamera = nil
 local currentAnimations = {}
 local targetPlayer = nil
+local isCameraLocked = false
 
 -- Utility Functions
 local function LoadAnimDict(dict)
@@ -39,27 +40,59 @@ local function GetNearestPlayer()
 end
 
 local function CreateASLCamera()
-    -- Get player head position for camera
     local playerPed = PlayerPedId()
-    local headBone = GetPedBoneIndex(playerPed, 31086) -- SKEL_Head
-    local headCoords = GetPedBoneCoords(playerPed, headBone, 0.0, 0.0, 0.0)
     
-    -- Create camera
-    aslCamera = CreateCamWithParams(
-        "DEFAULT_SCRIPTED_CAMERA",
-        headCoords.x, headCoords.y, headCoords.z + 0.2,
-        0.0, 0.0, 0.0,
-        Config.Settings.cameraFOV,
-        true, 2
-    )
-    
-    -- Focus on the target player if found
-    if targetPlayer then
+    if not targetPlayer then  -- Self mode (no target)
+        -- Position camera in front of player looking at them
+        local playerCoords = GetEntityCoords(playerPed)
+        local playerHeading = GetEntityHeading(playerPed)
+        
+        -- Calculate position in front of player
+        local rad = math.rad(playerHeading)
+        local distance = 1.5 -- Distance in front of player
+        local height = 0.5 -- Height offset
+        
+        local camX = playerCoords.x - math.sin(rad) * distance
+        local camY = playerCoords.y + math.cos(rad) * distance
+        local camZ = playerCoords.z + height
+        
+        -- Create camera
+        aslCamera = CreateCamWithParams(
+            "DEFAULT_SCRIPTED_CAMERA",
+            camX, camY, camZ,
+            0.0, 0.0, 0.0,
+            Config.Settings.cameraFOV,
+            true, 2
+        )
+        
+        -- Point camera at player's upper body
+        PointCamAtEntity(aslCamera, playerPed, 0.0, 0.0, 0.5, true)
+    else
+        -- Normal mode: Camera from player position looking at target
+        local playerCoords = GetEntityCoords(playerPed)
+        local playerHeading = GetEntityHeading(playerPed)
+        local rad = math.rad(playerHeading)
+        
+        -- Position camera at same height, slightly forward
+        local forwardOffset = 0.5  -- Move camera forward from player
+        local height = 0.5  -- Same height offset
+        
+        local camX = playerCoords.x - math.sin(rad) * forwardOffset
+        local camY = playerCoords.y + math.cos(rad) * forwardOffset
+        local camZ = playerCoords.z + height
+        
+        -- Create camera
+        aslCamera = CreateCamWithParams(
+            "DEFAULT_SCRIPTED_CAMERA",
+            camX, camY, camZ,
+            0.0, 0.0, 0.0,
+            Config.Settings.cameraFOV,
+            true, 2
+        )
+        
+        -- Focus on the target player
         PointCamAtEntity(aslCamera, targetPlayer, 0.0, 0.0, 0.5, true)
     end
-    
-    -- Enable first-person view
-    SetFollowPedCamViewMode(4)
     
     -- Smooth transition to camera
     RenderScriptCams(true, true, Config.Settings.cameraTransitionTime, true, true)
@@ -76,24 +109,6 @@ local function RestoreCamera()
     
     -- Restore third person view
     SetFollowPedCamViewMode(0)
-end
-
-local function GetTextInput(title, maxLength)
-    AddTextEntry('ASL_INPUT', title)
-    DisplayOnscreenKeyboard(1, "ASL_INPUT", "", "", "", "", "", maxLength or 100)
-    
-    while UpdateOnscreenKeyboard() == 0 do
-        DisableAllControlActions(0)
-        Wait(0)
-    end
-    
-    if UpdateOnscreenKeyboard() == 1 then
-        local result = GetOnscreenKeyboardResult()
-        Wait(100)
-        return result
-    else
-        return nil
-    end
 end
 
 local function NormalizeText(text)
@@ -231,9 +246,9 @@ local function PlayASLAnimation(animData)
         if Config.Settings.debugMode then
             print(string.format("^1[ASL Debug] Failed to load animation dictionary: %s^0", animDict))
         end
-        TriggerEvent('chat:addMessage', {
-            color = {255, 100, 100},
-            args = {"ASL", "Animation not found: " .. animDict}
+        SendNUIMessage({
+            type = 'updateStatus',
+            status = 'Animation not found: ' .. animDict
         })
         return
     end
@@ -259,17 +274,6 @@ local function PlayASLAnimation(animData)
         end
     end
     
-    -- Show subtitle if enabled
-    if Config.Settings.showSubtitles then
-        local endTime = GetGameTimer() + animData.duration
-        CreateThread(function()
-            while GetGameTimer() < endTime and isASLActive do
-                Wait(0)
-                DrawSubtitle("Signing: " .. string.upper(animData.text))
-            end
-        end)
-    end
-    
     -- Wait for animation to complete
     Wait(animData.duration)
     
@@ -282,76 +286,72 @@ local function PlayASLAnimation(animData)
     RemoveAnimDict(animDict)
 end
 
-function DrawSubtitle(text)
-    SetTextFont(4)
-    SetTextProportional(1)
-    SetTextScale(0.5, 0.5)
-    SetTextColour(255, 255, 255, 255)
-    SetTextDropShadow(0, 0, 0, 0, 255)
-    SetTextEdge(2, 0, 0, 0, 255)
-    SetTextDropShadow()
-    SetTextOutline()
-    SetTextCentre(1)
-    SetTextEntry("STRING")
-    AddTextComponentString(text)
-    DrawText(0.5, 0.85)
-end
-
-function DrawInstructions()
-    local text = "Press ~r~X~w~ to stop signing"
-    SetTextFont(0)
-    SetTextProportional(1)
-    SetTextScale(0.3, 0.3)
-    SetTextColour(255, 255, 255, 200)
-    SetTextEntry("STRING")
-    AddTextComponentString(text)
-    DrawText(0.5, 0.92)
-end
-
+-- Modified StartASLMode for signing to others
 local function StartASLMode()
-    if isASLActive then return end
-    
-    -- Find nearest player (unless in test mode)
-    if not Config.Settings.testMode then
-        local nearest, distance = GetNearestPlayer()
-        if not nearest then
-            TriggerEvent('chat:addMessage', {
-                color = {255, 100, 100},
-                args = {"ASL", "No players nearby to sign to!"}
-            })
-            return
-        end
-        targetPlayer = nearest
-    else
-        -- Test mode - no target required
-        targetPlayer = nil
-        if Config.Settings.debugMode then
-            print("^3[ASL Debug] Test mode enabled - no target player required^0")
-        end
+    if isASLActive then 
+        StopASLMode()
+        return 
     end
     
-    isASLActive = true
-    
-    -- Get text input
-    local inputText = GetTextInput("Enter text to sign in ASL:", 100)
-    if not inputText or inputText == "" then
-        isASLActive = false
-        targetPlayer = nil
-        return
-    end
-    
-    -- Create camera and focus on target
-    CreateASLCamera()
-    
-    -- Parse text into animations
-    currentAnimations = ParseTextForAnimations(inputText)
-    
-    if #currentAnimations == 0 then
+    -- Find nearest player (required for normal mode)
+    local nearest, distance = GetNearestPlayer()
+    if not nearest then
         TriggerEvent('chat:addMessage', {
             color = {255, 100, 100},
-            args = {"ASL", "No valid animations found for: " .. inputText}
+            args = {"ASL", "No players nearby to sign to!"}
         })
+        return
+    end
+    targetPlayer = nearest
+    
+    -- Create camera
+    CreateASLCamera()
+    isCameraLocked = true
+    isASLActive = true
+    
+    -- Show persistent input
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        type = 'showASLInput',
+        persistent = true
+    })
+end
+
+-- New function for self-signing mode
+local function StartASLSelfMode()
+    if isASLActive then 
         StopASLMode()
+        return 
+    end
+    
+    -- No target needed for self mode
+    targetPlayer = nil
+    
+    -- Create camera for self viewing
+    CreateASLCamera()
+    isCameraLocked = true
+    isASLActive = true
+    
+    -- Show persistent input
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        type = 'showASLInput',
+        persistent = true
+    })
+end
+
+-- Process text without closing
+local function ProcessASLText(text)
+    if not text or text == "" then return end
+    
+    -- Parse text into animations
+    currentAnimations = ParseTextForAnimations(text)
+    
+    if #currentAnimations == 0 then
+        SendNUIMessage({
+            type = 'updateStatus',
+            status = 'No valid animations found'
+        })
         return
     end
     
@@ -359,26 +359,110 @@ local function StartASLMode()
     CreateThread(function()
         for _, animData in ipairs(currentAnimations) do
             if not isASLActive then break end
+            
+            -- Send signing status to NUI (skip for pauses)
+            if animData.type ~= "pause" and animData.text then
+                SendNUIMessage({
+                    type = 'updateStatus',
+                    status = 'Signing: ' .. string.upper(animData.text)
+                })
+            end
+            
             PlayASLAnimation(animData)
         end
         
-        -- Finished all animations
+        -- Clear status when done
         if isASLActive then
-            Wait(1000) -- Brief pause at end
-            StopASLMode()
+            SendNUIMessage({
+                type = 'updateStatus',
+                status = ''
+            })
         end
     end)
+end
+
+-- Modified NUI Callbacks
+RegisterNUICallback('submitASLText', function(data, cb)
+    -- Process text but don't close
+    ProcessASLText(data.text)
+    cb('ok')
+end)
+
+RegisterNUICallback('closeASL', function(data, cb)
+    StopASLMode()
+    cb('ok')
+end)
+
+-- Modified StopASLMode
+function StopASLMode()
+    if not isASLActive then return end
     
-    -- Handle controls while signing
-    CreateThread(function()
-        while isASLActive do
-            Wait(0)
-            
-            -- Show instructions
-            if Config.Settings.showInstructions then
-                DrawInstructions()
-            end
-            
+    isASLActive = false
+    isCameraLocked = false
+    targetPlayer = nil
+    currentAnimations = {}
+    
+    -- Clear animations
+    local playerPed = PlayerPedId()
+    ClearPedTasks(playerPed)
+    
+    -- Restore camera
+    RestoreCamera()
+    
+    -- Hide NUI
+    SetNuiFocus(false, false)
+    SendNUIMessage({
+        type = 'hideASLInput'
+    })
+    
+    -- Notify
+    TriggerEvent('chat:addMessage', {
+        color = {100, 200, 100},
+        args = {"ASL", "Stopped signing"}
+    })
+end
+
+-- Register main command
+RegisterCommand('asl', function(source, args, rawCommand)
+    if #args > 0 then
+        -- Start ASL mode if not active
+        if not isASLActive then
+            StartASLMode()
+            Wait(500) -- Wait for camera to position
+        end
+        
+        -- Process the text directly
+        local inputText = table.concat(args, " ")
+        ProcessASLText(inputText)
+    else
+        -- Toggle ASL mode
+        StartASLMode()
+    end
+end, false)
+
+-- Self signing command
+RegisterCommand('aslself', function(source, args, rawCommand)
+    if #args > 0 then
+        -- Start self mode if not active
+        if not isASLActive then
+            StartASLSelfMode()
+            Wait(500) -- Wait for camera to position
+        end
+        
+        -- Process the text directly
+        local inputText = table.concat(args, " ")
+        ProcessASLText(inputText)
+    else
+        -- Toggle self mode
+        StartASLSelfMode()
+    end
+end, false)
+
+-- Handle controls while signing (simplified - only disable movement)
+CreateThread(function()
+    while true do
+        Wait(0)
+        if isASLActive then
             -- Hide HUD elements
             HideHudAndRadarThisFrame()
             
@@ -391,102 +475,15 @@ local function StartASLMode()
                 DisableControlAction(0, 34, true)  -- Move left
                 DisableControlAction(0, 35, true)  -- Move right
             end
-            
-            -- Check for stop key
-            if IsDisabledControlJustPressed(0, Config.Settings.stopKey) then
-                StopASLMode()
-            end
         end
-    end)
-end
+    end
+end)
 
-function StopASLMode()
-    if not isASLActive then return end
-    
-    isASLActive = false
-    targetPlayer = nil
-    currentAnimations = {}
-    
-    -- Clear animations
-    local playerPed = PlayerPedId()
-    ClearPedTasks(playerPed)
-    
-    -- Restore camera
-    RestoreCamera()
-    
-    -- Notify
-    TriggerEvent('chat:addMessage', {
-        color = {100, 200, 100},
-        args = {"ASL", "Stopped signing"}
-    })
-end
-
--- Register main command
-RegisterCommand('asl', function(source, args, rawCommand)
-    if #args > 0 then
-        -- Direct text input via command
-        local inputText = table.concat(args, " ")
-        
-        -- Find nearest player (unless in test mode)
-        if not Config.Settings.testMode then
-            local nearest, distance = GetNearestPlayer()
-            if not nearest then
-                TriggerEvent('chat:addMessage', {
-                    color = {255, 100, 100},
-                    args = {"ASL", "No players nearby to sign to!"}
-                })
-                return
-            end
-            targetPlayer = nearest
-        else
-            targetPlayer = nil
-        end
-        
-        isASLActive = true
-        
-        -- Create camera and start signing
-        CreateASLCamera()
-        currentAnimations = ParseTextForAnimations(inputText)
-        
-        -- Start animation playback
-        CreateThread(function()
-            for _, animData in ipairs(currentAnimations) do
-                if not isASLActive then break end
-                PlayASLAnimation(animData)
-            end
-            
-            if isASLActive then
-                Wait(1000)
-                StopASLMode()
-            end
-        end)
-        
-        -- Handle controls
-        CreateThread(function()
-            while isASLActive do
-                Wait(0)
-                if Config.Settings.showInstructions then
-                    DrawInstructions()
-                end
-                HideHudAndRadarThisFrame()
-                
-                if not Config.Settings.allowMovement then
-                    DisableControlAction(0, 30, true)
-                    DisableControlAction(0, 31, true)
-                    DisableControlAction(0, 32, true)
-                    DisableControlAction(0, 33, true)
-                    DisableControlAction(0, 34, true)
-                    DisableControlAction(0, 35, true)
-                end
-                
-                if IsDisabledControlJustPressed(0, Config.Settings.stopKey) then
-                    StopASLMode()
-                end
-            end
-        end)
-    else
-        -- No arguments, show text input prompt
-        StartASLMode()
+-- Register ESC keybind for closing ASL
+RegisterKeyMapping('aslclose', 'Close ASL Mode', 'keyboard', 'ESCAPE')
+RegisterCommand('aslclose', function()
+    if isASLActive then
+        StopASLMode()
     end
 end, false)
 
@@ -504,17 +501,18 @@ RegisterCommand('aslhelp', function()
         multiline = true,
         args = {"ASL Help", [[
 Commands:
-- /asl - Opens text prompt for signing
-- /asl [text] - Sign text directly
+- /asl - Sign to nearest player
+- /asl [text] - Sign text directly to nearest player
+- /aslself - Sign to yourself (practice mode)
+- /aslself [text] - Sign text directly in self mode
 - /asldebug - Toggle debug mode
-- /asltest - Toggle test mode (no nearby player required)
-- Press X while signing to stop
+- Press ESC or type 'exit' to close ASL mode
 
 The system will:
-- Find the nearest player and focus on them
+- Focus camera on the target player (or yourself)
+- Keep input box open for continuous signing
 - Play full phrase animations when available
-- Otherwise spell words letter by letter
-- Show subtitles of what you're signing]]
+- Otherwise spell words letter by letter]]
         }
     })
 end, false)
@@ -525,14 +523,5 @@ RegisterCommand('asldebug', function()
     TriggerEvent('chat:addMessage', {
         color = {200, 200, 100},
         args = {"ASL", "Debug mode " .. (Config.Settings.debugMode and "enabled" or "disabled")}
-    })
-end, false)
-
--- Test mode toggle
-RegisterCommand('asltest', function()
-    Config.Settings.testMode = not Config.Settings.testMode
-    TriggerEvent('chat:addMessage', {
-        color = {200, 200, 100},
-        args = {"ASL", "Test mode " .. (Config.Settings.testMode and "enabled (no target required)" or "disabled")}
     })
 end, false)
