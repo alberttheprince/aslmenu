@@ -3,6 +3,8 @@ local aslCamera = nil
 local currentAnimations = {}
 local targetPlayer = nil
 local isCameraLocked = false
+local isThirdPersonMode = false  -- New flag for third-person mode
+local isTypingActive = false  -- Track if currently typing in third-person mode
 
 -- Utility Functions
 local function LoadAnimDict(dict)
@@ -308,6 +310,7 @@ local function StartASLMode()
     CreateASLCamera()
     isCameraLocked = true
     isASLActive = true
+    isThirdPersonMode = false
     
     -- Show persistent input
     SetNuiFocus(true, true)
@@ -331,6 +334,7 @@ local function StartASLSelfMode()
     CreateASLCamera()
     isCameraLocked = true
     isASLActive = true
+    isThirdPersonMode = false
     
     -- Show persistent input
     SetNuiFocus(true, true)
@@ -338,6 +342,53 @@ local function StartASLSelfMode()
         type = 'showASLInput',
         persistent = true
     })
+end
+
+-- NEW: Third-person ASL mode without camera lock
+local function StartASLThirdPersonMode()
+    if isASLActive then 
+        StopASLMode()
+        return 
+    end
+    
+    -- No target or camera needed for third-person mode
+    targetPlayer = nil
+    isASLActive = true
+    isCameraLocked = false
+    isThirdPersonMode = true
+    
+    -- Don't lock controls initially - just show the UI
+    SetNuiFocus(false, false)
+    SendNUIMessage({
+        type = 'showASLInput',
+        persistent = true,
+        thirdPerson = true
+    })
+    
+    -- Notify user they're in third-person mode
+    TriggerEvent('chat:addMessage', {
+        color = {100, 200, 100},
+        args = {"ASL", "Third-person mode - Press ENTER to type, ESC to exit. You can move freely!"}
+    })
+end
+
+-- Function to toggle text input in third-person mode
+local function ToggleThirdPersonInput(enable)
+    if isThirdPersonMode and isASLActive then
+        if enable then
+            isTypingActive = true
+            SetNuiFocus(true, false)  -- Enable keyboard input, no cursor
+            SendNUIMessage({
+                type = 'focusInput'
+            })
+        else
+            isTypingActive = false
+            SetNuiFocus(false, false)  -- Disable NUI focus completely
+            SendNUIMessage({
+                type = 'blurInput'
+            })
+        end
+    end
 end
 
 -- Process text without closing
@@ -385,11 +436,24 @@ end
 RegisterNUICallback('submitASLText', function(data, cb)
     -- Process text but don't close
     ProcessASLText(data.text)
+    
+    -- In third-person mode, release focus after submitting
+    if isThirdPersonMode then
+        ToggleThirdPersonInput(false)
+    end
+    
     cb('ok')
 end)
 
 RegisterNUICallback('closeASL', function(data, cb)
     StopASLMode()
+    cb('ok')
+end)
+
+RegisterNUICallback('releaseThirdPersonFocus', function(data, cb)
+    if isThirdPersonMode then
+        ToggleThirdPersonInput(false)
+    end
     cb('ok')
 end)
 
@@ -399,6 +463,8 @@ function StopASLMode()
     
     isASLActive = false
     isCameraLocked = false
+    isThirdPersonMode = false
+    isTypingActive = false  -- Reset typing state
     targetPlayer = nil
     currentAnimations = {}
     
@@ -406,8 +472,10 @@ function StopASLMode()
     local playerPed = PlayerPedId()
     ClearPedTasks(playerPed)
     
-    -- Restore camera
-    RestoreCamera()
+    -- Restore camera (only if it exists)
+    if aslCamera then
+        RestoreCamera()
+    end
     
     -- Hide NUI
     SetNuiFocus(false, false)
@@ -458,26 +526,70 @@ RegisterCommand('aslself', function(source, args, rawCommand)
     end
 end, false)
 
--- Handle controls while signing (simplified - only disable movement)
+-- NEW: Third-person ASL command
+RegisterCommand('asl2', function(source, args, rawCommand)
+    if #args > 0 then
+        -- Start third-person mode if not active
+        if not isASLActive then
+            StartASLThirdPersonMode()
+        end
+        
+        -- Process the text directly
+        local inputText = table.concat(args, " ")
+        ProcessASLText(inputText)
+    else
+        -- Toggle third-person mode
+        StartASLThirdPersonMode()
+    end
+end, false)
+
+-- Handle controls while signing (modified for third-person mode)
 CreateThread(function()
     while true do
         Wait(0)
         if isASLActive then
-            -- Hide HUD elements
-            HideHudAndRadarThisFrame()
-            
-            -- Disable movement if configured
-            if not Config.Settings.allowMovement then
-                DisableControlAction(0, 30, true)  -- Move left/right
-                DisableControlAction(0, 31, true)  -- Move forward/back
-                DisableControlAction(0, 32, true)  -- Move forward
-                DisableControlAction(0, 33, true)  -- Move back
-                DisableControlAction(0, 34, true)  -- Move left
-                DisableControlAction(0, 35, true)  -- Move right
+            -- Only hide HUD and disable movement if NOT in third-person mode
+            if not isThirdPersonMode then
+                -- Hide HUD elements
+                HideHudAndRadarThisFrame()
+                
+                -- Disable movement if configured
+                if not Config.Settings.allowMovement then
+                    DisableControlAction(0, 30, true)  -- Move left/right
+                    DisableControlAction(0, 31, true)  -- Move forward/back
+                    DisableControlAction(0, 32, true)  -- Move forward
+                    DisableControlAction(0, 33, true)  -- Move back
+                    DisableControlAction(0, 34, true)  -- Move left
+                    DisableControlAction(0, 35, true)  -- Move right
+                end
+            end
+            -- In third-person mode, allow all movement and keep HUD visible
+        end
+    end
+end)
+
+-- Handle Enter key for third-person text input
+CreateThread(function()
+    while true do
+        Wait(0)
+        if isASLActive and isThirdPersonMode and not isTypingActive then
+            -- Check multiple possible Enter key controls
+            if IsControlJustPressed(0, 18) or  -- Enter (phone)
+               IsControlJustPressed(0, 201) or  -- Frontend accept
+               IsControlJustPressed(0, 176) then -- Enter (alternative)
+                ToggleThirdPersonInput(true)
             end
         end
     end
 end)
+
+-- Alternative: Register a key mapping for Enter in third-person mode
+RegisterCommand('asl_activate_input', function()
+    if isASLActive and isThirdPersonMode and not isTypingActive then
+        ToggleThirdPersonInput(true)
+    end
+end, false)
+RegisterKeyMapping('asl_activate_input', 'Activate ASL Input (Third Person)', 'keyboard', 'RETURN')
 
 -- Register ESC keybind for closing ASL
 RegisterKeyMapping('aslclose', 'Close ASL Mode', 'keyboard', 'ESCAPE')
@@ -494,25 +606,36 @@ AddEventHandler('onResourceStop', function(resourceName)
     end
 end)
 
--- Help command
+-- Updated help command
 RegisterCommand('aslhelp', function()
     TriggerEvent('chat:addMessage', {
         color = {100, 200, 255},
         multiline = true,
         args = {"ASL Help", [[
 Commands:
-- /asl - Sign to nearest player
+- /asl - Sign to nearest player (camera focus)
 - /asl [text] - Sign text directly to nearest player
-- /aslself - Sign to yourself (practice mode)
+- /aslself - Sign to yourself (practice mode with camera)
 - /aslself [text] - Sign text directly in self mode
+- /asl2 - Third-person signing (move while signing!)
+- /asl2 [text] - Sign text in third-person mode
 - /asldebug - Toggle debug mode
 - Press ESC or type 'exit' to close ASL mode
 
+Third-Person Mode Controls (/asl2):
+- Press ENTER to activate text input
+- Press ENTER again to sign the text
+- Press ESC to exit text input or close ASL
+- You can move freely with WASD when not typing
+
+Modes:
+- Camera modes (/asl, /aslself): Focuses camera, no movement
+- Third-person mode (/asl2): Keep normal view, move freely
+
 The system will:
-- Focus camera on the target player (or yourself)
-- Keep input box open for continuous signing
 - Play full phrase animations when available
-- Otherwise spell words letter by letter]]
+- Otherwise spell words letter by letter
+- In third-person mode, you can walk/run while signing!]]
         }
     })
 end, false)

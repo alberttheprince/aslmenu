@@ -1,14 +1,23 @@
 Config = {}
 
--- Commands
--- /asl - Opens text prompt for signing in ASL (or /asl [text] to sign directly)
--- /aslhelp - Shows all available commands and how the system works
--- /asldebug - Toggles debug mode to show animation details in console (useful for troubleshooting)
--- /asltest - Toggles test mode to allow signing without nearby players (useful for testing alone)
--- Press X - Stops signing at any time
+-- Commands:
+-- - /asl - Sign to nearest player (camera focus)
+-- - /asl [text] - Sign text directly to nearest player
+-- - /aslself - Sign to yourself (practice mode with camera)
+-- - /aslself [text] - Sign text directly in self mode
+-- - /asl2 - Third-person signing (move while signing!)
+-- - /asl2 [text] - Sign text in third-person mode
+-- - /asldebug - Toggle debug mode
+-- - Press ESC or type 'exit' to close ASL mode
 
--- Animation definitions with both dictionary and animation name
--- Each animation requires: dict (animation dictionary) and name (animation clip name)
+-- Modes:
+-- - Camera modes (/asl, /aslself): Focuses camera, no movement
+-- - Third-person mode (/asl2): Keep normal view, move freely
+
+-- The system will:
+-- - Play full phrase animations when available
+-- - Otherwise spell words letter by letter
+-- - In third-person mode, you can walk/run while signing!
 
 -- Letter animations
 Config.LetterAnimations = {

@@ -44,6 +44,13 @@ body {
     padding: 15px;
     border: 2px solid rgba(100, 200, 255, 0.5);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s;
+}
+
+/* Highlight when ready for input in third-person mode */
+.input-wrapper.typing-active {
+    border-color: rgba(100, 255, 100, 0.8);
+    box-shadow: 0 0 20px rgba(100, 255, 100, 0.3);
 }
 
 #asl-input {
@@ -64,9 +71,23 @@ body {
     box-shadow: 0 0 10px rgba(100, 200, 255, 0.3);
 }
 
+/* Dimmed input when not typing in third-person mode */
+#asl-input:not(:focus) {
+    opacity: 0.7;
+}
+
 .hint {
     margin-top: 8px;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);  /* Changed to white with 90% opacity */
+    font-size: 13px;  /* Slightly larger for better readability */
     text-align: center;
+    transition: color 0.3s;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);  /* Add shadow for better contrast */
+    font-weight: 500;  /* Slightly bolder for readability */
+}
+
+/* Brighter hint when typing is active */
+.hint.active {
+    color: rgba(100, 255, 100, 1);  /* Full opacity green when active */
+    font-weight: 600;  /* Even bolder when active */
 }
