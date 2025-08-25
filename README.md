@@ -17,6 +17,8 @@ If you'd like to contribute, please use a popular, available ASL reference such 
 - Collection of signs/premade sentences
 - Ability to pre-structure sentences to display coherent messages like real sign language
 - Ability to view other users from an accurate, first-person perspective while signing
+- Able to sign in third person
+- Simple, easy to use and read UI
 
 # **Credit:**
 - The [Popcorn Roleplay Community](https://discord.com/invite/popcornroleplay) for sponsoring the creation of this menu, managing the project, and testing the emotes
