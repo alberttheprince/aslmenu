@@ -36,6 +36,20 @@ function updateStatus(status) {
     document.getElementById('status-display').textContent = status;
 }
 
+// Global keydown listener for Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        fetch(`https://aslmenu/closeASL`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        hideInput();
+    }
+});
+
+// Input-specific listener for Enter key and text submission
 document.getElementById('asl-input').addEventListener('keydown', (e) => {
     if (!inputReady) return;
     
@@ -65,13 +79,6 @@ document.getElementById('asl-input').addEventListener('keydown', (e) => {
             // Clear input for next entry
             e.target.value = '';
         }
-    } else if (e.key === 'Escape') {
-        e.preventDefault();
-        fetch(`https://aslmenu/closeASL`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-        hideInput();
     }
+    // Removed Escape handling from here since it's now global
 });
